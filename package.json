@@ -1,0 +1,26 @@
+{
+  "name": "github-issue-fork",
+  "version": "1.0.0",
+  "description": "This tool is designed to synchronize issues between two GitHub repositories, including the ability to create new issues, update existing ones, and close issues based on their state in the upstream repository.",
+  "main": "src/main.ts",
+  "types": "commonjs",
+  "scripts": {
+    "start": "npx tsx src/main.ts"
+  },
+  "keywords": [
+    "github",
+    "issue",
+    "fork"
+  ],
+  "author": "IOLOII",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/github": "^6.0.0",
+    "@types/node": "^22.13.4",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "qs": "^6.14.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}
