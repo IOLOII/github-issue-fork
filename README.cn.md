@@ -1,4 +1,6 @@
-### 中文功能文档
+### GitHub Issues Sync Tool Documentation
+
+[English](README.md) | [中文](README.cn.md)
 
 ---
 
@@ -31,13 +33,12 @@
 
    在项目根目录下创建一个名为`.env`的文件，内容如下：
 
-   ```
+   ```bash
    fork_owner =
    fork_repo =
    owner =
    repo =
    github_token = ghp_***
-
    ```
 
 3. **运行脚本**

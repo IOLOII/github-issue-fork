@@ -33,15 +33,15 @@ This tool is designed to synchronize issues between two GitHub repositories, inc
 
    In your project root directory, create a `.env` file with the following content:
 
-   ```
-  fork_owner =
+   ```bash
+   fork_owner =
    fork_repo =
    owner =
    repo =
    github_token = ghp_***
    ```
 
-1. **Run the Script**
+3. **Run the Script**
 
    Execute script:
 
