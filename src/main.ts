@@ -1,13 +1,24 @@
-require('dotenv').config()
+require('dotenv').config({ path: ['.env.local', '.env'] })
 
-const axios = require('axios')
-const fs = require('fs')
-const path = require('path')
-const https = require('https')
+const { fork_owner, fork_repo, owner, repo, github_token } = process.env
+
+console.dir({ fork_owner, fork_repo, owner, repo, github_token })
+
+;[fork_owner, fork_repo, owner, repo, github_token].some(item => {
+  if (!item) {
+    console.error('Please set all environment variables.')
+    process.exit(1)
+  }
+})
+
+import axios from 'axios'
+import fs from 'fs'
+import path from 'path'
+import https from 'https'
 
 // 导入 winston 以及 winston-daily-rotate-file
-const { createLogger, format, transports } = require('winston')
-const DailyRotateFile = require('winston-daily-rotate-file')
+import { createLogger, format, transports } from 'winston'
+import DailyRotateFile from 'winston-daily-rotate-file'
 
 // 配置授权信息
 const authorization = `Bearer ${process.env.github_token}`
@@ -78,7 +89,7 @@ async function fetchIssues(page = 1, since = null) {
   }
 }
 
-async function closeIssue(issueId: string) {
+export async function closeIssue(issueId: string) {
   const config = {
     method: 'patch',
     maxBodyLength: Infinity,
@@ -189,7 +200,7 @@ async function createOrUpdateIssue(issue: any) {
   }
 }
 
-async function main() {
+export async function main() {
   let page = 1
   let allIssuesFetched = false
   const since = 'YYYY-MM-DDTHH:MM:SSZ' // 根据需要设置或动态获取
@@ -219,6 +230,6 @@ async function main() {
   logger.info('Finished copying and updating issues and updated sync records.')
 }
 
-main().catch(error => {
-  console.error('An unexpected error occurred:', error)
-})
+// main().catch(error => {
+//   console.error('An unexpected error occurred:', error)
+// })
