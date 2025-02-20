@@ -49,6 +49,11 @@ This tool is designed to synchronize issues between two GitHub repositories, inc
    npm start
    ```
 
+4. ** terminal script **
+   ```
+   npx tsx src/tool.ts --help
+   ```
+
 ---
 
 #### Usage
@@ -62,3 +67,7 @@ The script will automatically handle synchronization of issues from the upstream
 All operations performed by the script are logged into `application.log` located in the same directory as the script. Additionally, logs are outputted to the system log, which can be viewed using macOS's Console.app.
 
 ---
+
+#### Future
+
+- [ ] 🚀

@@ -5,7 +5,8 @@
   "main": "src/main.ts",
   "types": "commonjs",
   "scripts": {
-    "start": "npx tsx src/main.ts"
+    "start": "npx tsx src/main.ts",
+    "tool":"npx tsx src/tool.ts"
   },
   "keywords": [
     "github",

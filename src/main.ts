@@ -1,8 +1,9 @@
 require('dotenv').config({ path: ['.env.local', '.env'] })
 
 const { fork_owner, fork_repo, owner, repo, github_token } = process.env
-
-console.dir({ fork_owner, fork_repo, owner, repo, github_token })
+if (process.argv.some(arg => arg === '--debugger')) {
+  console.dir({ fork_owner, fork_repo, owner, repo, github_token })
+}
 
 ;[fork_owner, fork_repo, owner, repo, github_token].some(item => {
   if (!item) {
@@ -28,7 +29,10 @@ const agent = new https.Agent({
 })
 
 // 载入或初始化记录文件
-const recordFilePath = path.join(__dirname, 'sync_records.json')
+const recordFilePath = path.join(
+  __dirname,
+  `sync_records ${fork_owner + '-' + fork_repo + ':' + owner + '-' + repo}.json`
+)
 let syncRecords = {} as {
   [key: string]: {
     updated_at: string
@@ -41,6 +45,9 @@ try {
   syncRecords = JSON.parse(fs.readFileSync(recordFilePath, 'utf8'))
 } catch (err) {
   console.log('No existing sync records found or error reading file.')
+  // 如果文件不存在，创建文件
+  fs.writeFileSync(recordFilePath, '{}')
+  syncRecords = {}
 }
 
 // 设置日志配置
@@ -112,10 +119,33 @@ export async function closeIssue(issueId: string) {
   }
 }
 
-async function createOrUpdateIssue(issue: any) {
+export async function searchIssue(issueId: string): Promise<any> {
+  let config = {
+    method: 'get',
+    maxBodyLength: Infinity,
+    url: `https://api.github.com/repos/${process.env.fork_owner}/${process.env.fork_repo}/issues/${issueId}`,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: authorization,
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    httpsAgent: agent,
+  }
+
+  return await axios
+    .request(config)
+    .then(response => {
+      return Promise.resolve(response.data)
+    })
+    .catch(error => {
+      console.log(error)
+      return Promise.reject(error)
+    })
+}
+async function createOrUpdateIssue(issue: any): Promise<string> {
   if (issue.pull_request) {
     console.log(`     Skipping pull request #${issue.number}: ${issue.title}`)
-    return // 过滤掉 pull request
+    return Promise.resolve('') // 过滤掉 pull request
   }
 
   const existsInRecords = !!syncRecords[issue.id]
@@ -141,9 +171,9 @@ async function createOrUpdateIssue(issue: any) {
       httpsAgent: agent,
       data: data,
     }
-
+    let response
     try {
-      const response = await axios.request(config)
+      response = await axios.request(config)
       console.log(`Successfully created issue #${response.data.number}: ${response.data.title}`)
       syncRecords[issue.id] = {
         updated_at: new Date().toISOString(),
@@ -159,13 +189,16 @@ async function createOrUpdateIssue(issue: any) {
       }
     } catch (error) {
       console.error(`Failed to create issue "${issue.title}":`, error)
+      return Promise.reject('')
     }
+    return Promise.resolve(response.data.number)
   } else {
     // 检查并更新已存在的 issue
     // 如果上游issue是关闭状态，则同步关闭下游issue
     if (issue.state === 'closed' && syncRecords[issue.id].closed !== true) {
       await closeIssue(targetIssueId as unknown as string)
       syncRecords[issue.id].closed = true
+      return Promise.resolve(String(targetIssueId))
     } else if (syncRecords[issue.id].need_update) {
       // 更新其他内容
       const data = JSON.stringify({
@@ -195,8 +228,10 @@ async function createOrUpdateIssue(issue: any) {
         syncRecords[issue.id].closed = false
       } catch (error) {
         console.error(`Failed to update issue #${targetIssueId}:`, error)
+        return Promise.reject('')
       }
     }
+    return Promise.resolve(String(targetIssueId))
   }
 }
 
@@ -219,7 +254,9 @@ export async function main() {
     }
 
     for (const issue of issues) {
-      await createOrUpdateIssue(issue)
+      await createOrUpdateIssue(issue).then(targetIssueId => {
+        forkIssueComment(issue.number, targetIssueId)
+      })
     }
 
     page++
@@ -233,3 +270,71 @@ export async function main() {
 // main().catch(error => {
 //   console.error('An unexpected error occurred:', error)
 // })
+
+export async function forkIssueComment(sourceIssueId: string, targetIssueId: string) {
+  let config = {
+    method: 'get',
+    maxBodyLength: Infinity,
+    url: `https://api.github.com/repos/${process.env.fork_owner}/${process.env.fork_repo}/issues/${sourceIssueId}/comments`,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      Authorization: authorization,
+    },
+    httpsAgent: agent,
+  }
+
+  await axios
+    .request(config)
+    .then(async response => {
+      const promiseAll = response.data.map((commentObj: { body: string }) => {
+        return addComment(targetIssueId, commentObj.body)
+      })
+      await Promise.all(promiseAll).then(() => {
+        console.log('All comments have been added.')
+      }).catch((err)=>{
+        console.log('Failed to add comments.')
+      })
+    })
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+function addComment(issueId: string, comment: string) {
+  const axios = require('axios')
+  let data = JSON.stringify({
+    body: comment,
+  })
+
+  let config = {
+    method: 'post',
+    maxBodyLength: Infinity,
+    url: `https://api.github.com/repos/${process.env.owner}/${process.env.repo}/issues/${issueId}/comments`,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+      Authorization: authorization,
+    },
+    httpsAgent: agent,
+    data: data,
+  }
+
+  return axios
+    .request(config)
+    .then((response: any) => {
+      // console.log(JSON.stringify(response.data))
+      return Promise.resolve(response.data)
+    })
+    .catch((error: any) => {
+      console.log(error)
+      return Promise.reject(error)
+    })
+}
+
+export function forkSourceIssue(sourceIssueId: any) {
+  createOrUpdateIssue(sourceIssueId).then(targetIssueId => {
+    forkIssueComment(sourceIssueId.number, targetIssueId)
+  })
+}
