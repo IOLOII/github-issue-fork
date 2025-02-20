@@ -49,7 +49,7 @@
    npm start
    ```
 
-4. ** 增加了命令行工具 **
+4. **增加了命令行工具**
    ```
    npx tsx src/tool.ts --help
    ```

@@ -49,7 +49,7 @@ This tool is designed to synchronize issues between two GitHub repositories, inc
    npm start
    ```
 
-4. ** terminal script **
+4. **Terminal script**
    ```
    npx tsx src/tool.ts --help
    ```
